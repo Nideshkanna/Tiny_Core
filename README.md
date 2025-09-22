@@ -1,75 +1,143 @@
-# OpenFrame Overview
+# Microwatt + Sensor Fusion Accelerator on OpenFrame
 
-The OpenFrame Project provides an empty harness chip that differs significantly from the Caravel and Caravan designs. Unlike Caravel and Caravan, which include integrated SoCs and additional features, OpenFrame offers only the essential padframe, providing users with a clean slate for their custom designs.
+## Overview
 
-<img width="256" alt="Screenshot 2024-06-24 at 12 53 39 PM" src="https://github.com/efabless/openframe_timer_example/assets/67271180/ff58b58b-b9c8-4d5e-b9bc-bf344355fa80">
+This project integrates the **open-source Microwatt POWER CPU core** with a custom **sensor fusion accelerator**, implemented on the **OpenFrame harness**.
 
-## Key Characteristics of OpenFrame
+Unlike Caravel/Caravan, OpenFrame provides only the essential padframe, power-on-reset, and project ID ROM, giving us a clean slate to implement our custom SoC.
 
-1. **Minimalist Design:** 
-   - No integrated SoC or additional circuitry.
-   - Only includes the padframe, a power-on-reset circuit, and a digital ROM containing the 32-bit project ID.
+Our design demonstrates how an open-source CPU can be extended with a dedicated hardware accelerator to efficiently process real-time sensor data from IoT and wearable devices.
 
-2. **Padframe Compatibility:**
-   - The padframe design and pin placements match those of the Caravel and Caravan chips, ensuring compatibility and ease of transition between designs.
-   - Pin types are identical, with power and ground pins positioned similarly and the same power domains available.
+<img width="256" alt="OpenFrame Layout" src="https://github.com/efabless/openframe_timer_example/assets/67271180/ff58b58b-b9c8-4d5e-b9bc-bf344355fa80">
 
-3. **Flexibility:**
-   - Provides full access to all GPIO controls.
-   - Maximizes the user project area, allowing for greater customization and integration of alternative SoCs or user-specific projects at the same hierarchy level.
+---
 
-4. **Simplified I/O:**
-   - Pins that previously connected to CPU functions (e.g., flash controller interface, SPI interface, UART) are now repurposed as general-purpose I/O, offering flexibility for various applications.
+## Motivation
 
-The OpenFrame harness is ideal for those looking to implement custom SoCs or integrate user projects without the constraints of an existing SoC.
+IoT and wearable devices rely heavily on **real-time sensor data processing** (accelerometer, gyroscope, temperature, etc.). Software-only solutions consume significant power and add latency.
 
-## Features
+By integrating a **hardware accelerator** directly with Microwatt, we enable:
 
-1. 44 configurable GPIOs.
-2. User area of approximately 15mm².
-3. Supports digital, analog, or mixed-signal designs.
+- ⚡ Faster sensor fusion computations
+- 🔋 Lower power consumption
+- 📉 Reduced latency for event detection
+- 🔧 Demonstration of practical **open-source SoC customization** on OpenFrame
 
-# openframe_timer_example
+This aligns with the hackathon’s theme of **"Microwatt for the open computing era"**, showing how open CPUs can be adapted for edge AI and IoT.
 
-This example implements a simple timer and connects it to the GPIOs.
+---
 
-## Installation and Setup
+## Key Features of Our Design
 
-First, clone the repository:
+1. **Microwatt CPU Integration**
+    - Lightweight POWER ISA core
+    - Acts as the main controller for sensor data management
+2. **Custom Sensor Fusion Accelerator**
+    - Implements weighted averaging
+    - Kalman-filter inspired pre-processing
+    - Threshold-based event detection (e.g., fall detection, anomaly alerts)
+    - Exposed as memory-mapped peripheral to Microwatt
+3. **OpenFrame Harness Advantages**
+    - ~15mm² user area for CPU + accelerator
+    - 44 configurable GPIOs for sensor connections and debugging
+    - Simplified I/O with direct access to padframe
 
-```bash
-git clone https://github.com/efabless/openframe_timer_example.git
-cd openframe_timer_example
+---
+
+## Target Applications
+
+- IoT edge devices
+- Wearables (fitness tracking, health monitoring, fall detection)
+- Low-power industrial monitoring sensors
+
+---
+
+## Project Structure
+
+```
+microwatt_sensorfusion/
+│
+├── verilog/rtl/        # Microwatt + accelerator RTL
+│   ├── microwatt/      # Microwatt CPU core
+│   ├── accel/          # Sensor fusion accelerator
+│   └── top.v           # Integrated SoC top module
+│
+├── openlane/           # OpenLane configs
+│   └── sensorfusion/   # Design-specific flow configs
+│
+├── testbench/          # Simulation & verification files
+│
+├── docs/               # Documentation & block diagrams
+│
+└── README.md           # Project documentation
 ```
 
-Then, download all dependencies:
+## Setup Instructions
 
-```bash
+### 1. Clone Repository
+
+```
+git clone <repo_url>
+cd microwatt_sensorfusion
 make setup
 ```
 
-## Hardening the Design
+### 2. RTL Integration
 
-In this example, we will harden the timer. You will need to harden your own design similarly.
+- Place Microwatt + accelerator Verilog under `verilog/rtl/`
+- Update `openlane/sensorfusion/config.json` with:
+    - `DESIGN_NAME` = top-level module
+    - `VERILOG_FILES` = list of source files
+    - `CLOCK_PERIOD` = 25ns (40 MHz target)
 
-```bash
-make user_proj_timer
+### 3. Hardening Flow
+
 ```
-
-Once you have hardened your design, integrate it into the OpenFrame wrapper:
-
-```bash
+make sensorfusion
 make openframe_project_wrapper
 ```
 
-## Important Notes
+**4. Run Precheck**
 
-1. **Connecting to Power:**
-   - Ensure your design is connected to power using the power pins on the wrapper.
-   - Use the `vccd1_connection` and `vssd1_connection` macros, which contain the necessary vias and nets for power connections.
+```
+make run-precheck
+```
 
-2. **Flattening the Design:**
-   - If you plan to flatten your design within the `openframe_project_wrapper`, do not buffer the analog pins using standard cells.
+Ensure power connections use `vccd1_connection` and `vssd1_connection` macros.
 
-3. **Running Custom Steps:**
-   - Execute the custom step in OpenLane that copies the power pins from the template DEF. If this step is skipped, the precheck will fail, and your design will not be powered.
+## Deliverables
+
+- ✅ Open-source RTL (Microwatt + accelerator)
+- ✅ Testbenches and verification reports
+- ✅ Hardened GDS via OpenLane flow
+- ✅ Precheck logs and validation reports
+- ✅ Documentation + final video demo
+- ✅ MIT/Apache 2.0 licensed GitHub repository
+
+## Team
+
+- **Nidesh Kanna R**
+- **Sankar Narayan**
+- **Madhavan Shree A**
+- **Chezhiyan**
+- **Ebinesh**
+- **Jhotheeshwar**
+- **Ramaprakash**
+
+---
+
+## Future Work ✨
+
+- Adding machine learning accelerators (TinyML integration with Microwatt)
+- Expanding to multi-sensor fusion (e.g., heart rate, SpO₂, environmental sensors)
+- Integrating with RISC-V peripherals for hybrid open-source SoCs
+- Porting to FPGA for live demos before tapeout
+---
+
+## Acknowledgments 🙌
+
+This project builds on the amazing work of the **OpenPOWER Foundation**, **Microwatt developers**, and **ChipFoundry** for enabling open-source ASIC design.
+
+Special thanks to the mentors and the Microwatt Momentum Hackathon organizers for making this innovation possible.
+
+---
